@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive Class Listings</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <style>
+    .jr-container { 
+      display: none; 
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 1; 
+      left: 0;
+      top: 0;
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.4); 
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto; 
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%; 
+    }
+
+    .close-modal {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <script type="text/javascript" src="https://app.jackrabbitclass.com/jr3.0/Openings/OpeningsJS?OrgID=506286&amp;Session=2024-2025&amp;hidecols=Gender,Session,Openings,Tuition&amp;showcols=Location&amp;sort=Days,Time,Location"></script>
+
+  <table id="classTable" class="display"></table>
+
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript">
+jQuery(document).ready(function ($) {
+ // Get the HTML from the jr-container div
+      const html = $('.jr-container').html(); 
+
+      // Strip the document.write() wrapper (updated to handle the div)
+      const startIndex = html.indexOf('<table'); 
+      const endIndex = html.lastIndexOf('</table>') + 8; 
+      let tableHtml = html.substring(startIndex, endIndex);
+
+      // Parse the HTML and extract the data 
+      const data = parseHtmlToTableData(tableHtml); 
+
+      // Initialize DataTables with sorting enabled on specific columns
+      $('#classTable').DataTable({
+        data: data,
+        columns: [
+          { title: "Link", orderable: true },
+          { title: "Location", orderable: true },
+          { title: "Class Name", orderable: true },  
+          { title: "Day", orderable: true },
+	  { title: "Time", orderable: true },
+	  { title: "Ages", orderable: true },
+	  { title: "Start Date", orderable: true},
+	  { title: "Start End", orderable: true}
+          // Add other columns as needed
+        ],
+        searching: true, 
+        ordering: true,
+	columnDefs: [ {
+		title: "Link", 
+        render: function ( data, type, row, meta ) {
+			if (data.startsWith('https://')) {
+				return '<a href="' + data + '" target="_blank">Register</a>';
+			} else {
+				return data;
+            }
+        }
+    } ],
+	initComplete: function () {
+		this.api().columns().every( function () {
+			var column = this;
+			var select = $('<select><option value=""></option></select>')
+				.appendTo( $(column.footer()).empty() )
+				.on( 'change', function () {
+					var val = $.fn.dataTable.util.escapeRegex(
+						$(this).val());
+					column.search( val ? '^'+val+'$' : '', true, false )
+						.draw();
+				});
+
+			column.data().unique().sort().each( function ( d, j ) {
+				select.append( '<option value="'+d+'">'+d+'</option>' )
+			});
+		})
+	}
+      });
+
+      function parseHtmlToTableData(html) {
+          console.log(`${html}`);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const rows = doc.querySelectorAll('table tbody tr');
+      const data = [];
+
+  rows.forEach(row => {
+    const rowData = [];
+    const cells = row.querySelectorAll('td, th');
+    cells.forEach(cell => {
+      // Extract the "Link" value from the first cell
+      const linkValue = cell.textContent.trim();
+
+      // Check if the cell contains a link
+      const link = cell.querySelector('a');
+      if (link) {
+        // If it's a link, use the link's href
+        rowData.push(link.href);
+      } else {
+        // Otherwise, use the extracted value
+        rowData.push(linkValue);
+      }
+    });
+    data.push(rowData);
+  });
+
+  return data;
+}
+  // Group the data by class name
+  const groupedData = data.reduce((acc, row) => {
+    const className = row[1]; // Assuming "Class Name" is the second column (index 1)
+    if (!acc[className]) {
+      acc[className] = [];
+    }
+    acc[className].push(row);
+    return acc;
+  }, {});
+
+  // Create the HTML for the collapsible table
+    tableHtml = '<table id="classTable" class="display">';
+  for (const className in groupedData) {
+    tableHtml += `
+      <tr class="group-header">
+        <td colspan="5">${className}</td> 
+      </tr>
+    `;
+    groupedData[className].forEach(row => {
+      tableHtml += '<tr>';
+      row.forEach(cell => {
+        if (cell.startsWith('https://')) {
+          tableHtml += `<td><a href="${cell}" target="_blank">Register</a></td>`;
+        } else {
+          tableHtml += `<td>${cell}</td>`;
+        }
+      });
+      tableHtml += '</tr>';
+    });
+  }
+  tableHtml += '</table>';
+
+  // Replace the existing table with the new HTML
+  $('#classTable').replaceWith(tableHtml);
+
+  // Initialize DataTables with row grouping
+  $('#classTable').DataTable({
+    // ... your existing DataTables options ...
+    "columnDefs": [
+      { "visible": false, "targets": 1 } // Hide the "Class Name" column
+    ],
+    "order": [[1, 'asc']], // Initially sort by "Class Name"
+    "drawCallback": function (settings) {
+      var api = this.api();
+      var rows = api.rows({ page: 'current' }).nodes();
+      var last = null;
+
+      api.column(1, { page: 'current' }).data().each(function (group, i) {
+        if (last !== group) {
+          $(rows).eq(i).before(
+            '<tr class="group"><td colspan="4">' + group + '</td></tr>'
+          );
+          last = group;
+        }
+      });
+    }
+  });
+
+  // Add click event to toggle row visibility
+  $('#classTable tbody').on('click', 'tr.group', function () {
+    var currentOrder = table.order()[0];
+    if (currentOrder[0] === 1 && currentOrder[1] === 'asc') {
+      table.order([1, 'desc']).draw();
+    } else {
+      table.order([1, 'asc']).draw();
+    }
+  });
+});
+</script>
+</body>
+</html>

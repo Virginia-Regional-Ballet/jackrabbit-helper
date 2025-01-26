@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive Class Listings</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <style>
+    /* Add any custom CSS here if needed */
+  </style>
+</head>
+<body>
+
+  <script type="text/javascript" src="https://app.jackrabbitclass.com/jr3.0/Openings/OpeningsJS?OrgID=506286&amp;Session=2024-2025&amp;hidecols=Gender,Session,Openings,Tuition&amp;showcols=Location&amp;sort=Days,Time,Location"></script>
+
+  <table id="classTable" class="display"></table>
+
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript">
+    jQuery(document).ready(function ($) {
+      // Get the HTML from the Jackrabbit script tag
+      const data= $('.jr-container').html();
+
+console.log(data);
+
+      // Initialize DataTables
+      $('#classTable').DataTable({
+        data: data,
+        columns: [
+          { title: "Class", orderable: true},
+          { title: "Description", orderable: true},
+          { title: "Days", orderable: true },
+          { title: "Times", orderable: true },
+          { title: "Location", orderable: true }
+          // Add other columns as needed
+        ]
+      });
+
+      // ... (your parseHtmlToTableData function) ... 
+      function parseHtmlToTableData(html) {
+        // ... (your parsing logic) ...
+      }
+    });
+  </script>
+
+</body>
+</html>

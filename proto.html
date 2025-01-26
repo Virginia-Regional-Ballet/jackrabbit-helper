@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive Class Listings</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <style>
+    .jr-container { 
+      display: none; 
+    }
+      
+    #classTable td:nth-child(3) { 
+        max-width: 200px; 
+        max-height: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis; 
+    }
+@media (max-width: 768px) { 
+  #classTable {
+    font-size: 16px; /* Increased font size for mobile */
+  }
+  #classTable td, #classTable th {
+    padding: 10px; /* Increased padding for better touch targets */
+  }
+}
+
+  </style>
+</head>
+<body>
+
+  <script type="text/javascript" src="https://app.jackrabbitclass.com/jr3.0/Openings/OpeningsJS?OrgID=506286&amp;Session=2024-2025&amp;hidecols=Gender,Session,Openings,Tuition&amp;showcols=Location&amp;sort=Days,Time,Location"></script>
+
+  <table id="classTable" class="display"></table>
+
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript">
+    jQuery(document).ready(function ($) {
+      // Get the HTML from the jr-container div
+      const html = $('.jr-container').html(); 
+
+      // Strip the document.write() wrapper (updated to handle the div)
+      const startIndex = html.indexOf('<table'); 
+      const endIndex = html.lastIndexOf('</table>') + 8; 
+      const tableHtml = html.substring(startIndex, endIndex);
+
+      // Parse the HTML and extract the data 
+      const data = parseHtmlToTableData(tableHtml); 
+
+      // Initialize DataTables with sorting enabled on specific columns
+      $('#classTable').DataTable({
+        data: data,
+        columns: [
+          { title: "Link", orderable: true },
+          { title: "Location", orderable: true },
+          { title: "Class Name", orderable: true }, 
+          { title: "Description", orderable: true }, 
+          { title: "Day", orderable: true },
+	  { title: "Time", orderable: true },
+	  { title: "Ages", orderable: true },
+	  { title: "Start Date", orderable: true},
+	  { title: "Start End", orderable: true}
+          // Add other columns as needed
+        ],
+        searching: true, 
+        ordering: true,
+	columnDefs: [ {
+		targets: 0,
+		render: function ( data, type, row, meta ) {
+			if (data.startsWith('https://')) {
+				return '<a href="' + data + '" target="_blank">Register</a>';
+			} else {
+				return data;
+            }
+        }
+    } ],
+	initComplete: function () {
+		this.api().columns().every( function () {
+			var column = this;
+			var select = $('<select><option value=""></option></select>')
+				.appendTo( $(column.footer()).empty() )
+				.on( 'change', function () {
+					var val = $.fn.dataTable.util.escapeRegex(
+						$(this).val());
+					column.search( val ? '^'+val+'$' : '', true, false )
+						.draw();
+				});
+
+			column.data().unique().sort().each( function ( d, j ) {
+				select.append( '<option value="'+d+'">'+d+'</option>' )
+			});
+		})
+	}
+      });
+
+      function parseHtmlToTableData(html) {
+	            // Now parse the extracted table HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const rows = doc.querySelectorAll('table tbody tr');
+      const data = [];
+
+      rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll('td, th'); // Include both td and th
+        cells.forEach(cell => {
+          // Check if the cell contains a link
+          const link = cell.querySelector('a');
+          if (link) {
+            rowData.push(link.href); // Store the link's href value
+          } else {
+            rowData.push(cell.textContent.trim());
+          }
+        });
+        data.push(rowData);
+      });
+
+      return data;
+      }
+    });
+  </script>
+
+</body>
+</html>
